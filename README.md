@@ -40,6 +40,29 @@ The label is created from three rolling market features:
 
 These are combined into a composite `regime_score`, and train-set quantiles are used to convert the score into 3 classes.
 
+## Environment Setup
+
+This project should be installed from `requirements.txt`.
+
+Create and activate a virtual environment:
+
+```bash
+python -m venv venv
+source venv/bin/activate
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+If you are on Windows PowerShell, activate with:
+
+```powershell
+venv\Scripts\Activate.ps1
+```
+
 ## Repository Structure
 
 ### Data preparation and analysis
@@ -123,6 +146,13 @@ This is important because the project is treating the task as a time-series fore
 ## Sequence of Files to Run
 
 If you want to reproduce the full pipeline from raw data to models, run the scripts in this order.
+
+Before running the scripts, make sure your environment is active and the dependencies are installed:
+
+```bash
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
 ### 1. Download and prepare the market data
 
@@ -243,6 +273,9 @@ For each sample:
 If you only want the shortest useful run order:
 
 ```bash
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 python scraper.py
 python label_data.py
 python stateval.py
