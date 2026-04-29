@@ -42,15 +42,15 @@ class CFG:
     horizon: int = ARGS.horizon
     window: int = 20
     corr_window: int = 20
-    top_k: int = 8
+    top_k: int = 10
     node_dim: int = 5
 
     batch_size: int = 128
-    epochs: int = 20
-    patience: int = 5
+    epochs: int = 30
+    patience: int = 8
     lr: float = 8e-4
     weight_decay: float = 1e-4
-    label_smoothing: float = 0.02
+    label_smoothing: float = 0.0
 
     gcn_hidden: int = 40
     gcn_layers: int = 2
@@ -65,7 +65,16 @@ class CFG:
 
 
 cfg = CFG()
-MARKET_COLS = ["market_return", "market_volatility", "avg_correlation", "cross_sectional_dispersion"]
+MARKET_COLS = [
+    "market_return",
+    "market_volatility",
+    "avg_correlation",
+    "cross_sectional_dispersion",
+    "market_volatility_z",
+    "avg_correlation_z",
+    "cross_sectional_dispersion_z",
+    "regime_score",
+]
 CACHE_DIR = Path(ARGS.cache_dir)
 CACHE_DIR.mkdir(exist_ok=True)
 CACHE_TAG = f"h{cfg.horizon}_w{cfg.window}_cw{cfg.corr_window}_k{cfg.top_k}_nd{cfg.node_dim}"
@@ -109,8 +118,10 @@ def valid_dates(labels: pd.DataFrame) -> List[pd.Timestamp]:
 
 
 def split_dates(dates: List[pd.Timestamp]):
-    return [d for d in dates if d.year <= 2022], [d for d in dates if d.year == 2023], [d for d in dates if d.year >= 2024]
-
+    train_dates = [d for d in dates if d.year <= 2021]
+    val_dates = [d for d in dates if 2022 <= d.year <= 2023]
+    test_dates = [d for d in dates if d.year >= 2024]
+    return train_dates, val_dates, test_dates
 
 def node_features_for_day(values: np.ndarray, pos: int) -> np.ndarray:
     r1 = values[pos]
@@ -236,7 +247,7 @@ class TemporalAttention(nn.Module):
 
 
 class FastResidualDenseGCNAttention(nn.Module):
-    def __init__(self, node_dim=5, market_dim=4, num_classes=3):
+    def __init__(self, node_dim=5, market_dim=8, num_classes=3):
         super().__init__()
         self.input_proj = nn.Linear(node_dim, cfg.gcn_hidden)
         self.layers = nn.ModuleList([ResidualDenseGCNLayer(cfg.gcn_hidden, cfg.gcn_hidden) for _ in range(cfg.gcn_layers)])
@@ -266,10 +277,17 @@ class FastResidualDenseGCNAttention(nn.Module):
 def class_weights(labels, train_dates):
     y = labels.loc[train_dates, "future_label"].values
     counts = np.bincount(y, minlength=3).astype(np.float32)
-    weights = counts.sum() / (3.0 * np.maximum(counts, 1.0))
+
+    weights = np.sqrt(counts.sum() / (3.0 * np.maximum(counts, 1.0)))
     weights = weights / weights.mean()
+
+    # Slight calm boost for macro-F1, without overpredicting calm too much
+    weights[0] *= 1.15
+    weights = weights / weights.mean()
+
     print("Class counts:", counts.astype(int).tolist())
     print("Class weights:", np.round(weights, 4).tolist())
+
     return torch.tensor(weights, dtype=torch.float32, device=cfg.device)
 
 

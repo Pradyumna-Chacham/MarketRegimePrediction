@@ -156,7 +156,7 @@ def plot_market_cumulative_return(labels: pd.DataFrame) -> None:
     fig, ax = plt.subplots(figsize=(13, 5))
     ax.plot(labels.index, labels["market_cum_return"])
     add_turbulent_spans(ax, labels)
-    add_event_spans(ax)
+    add_event_spans(ax, annotate=False)
     ax.set_title("Equal-Weight Market Cumulative Return with Turbulent Regimes and Events")
     ax.set_xlabel("Date")
     ax.set_ylabel("Cumulative Return")
@@ -177,7 +177,7 @@ def plot_market_features(labels: pd.DataFrame) -> None:
         fig, ax = plt.subplots(figsize=(13, 5))
         ax.plot(labels.index, labels[col])
         add_turbulent_spans(ax, labels)
-        add_event_spans(ax)
+        add_event_spans(ax, annotate=False)
         ax.set_title(f"{col.replace('_', ' ').title()} with Turbulent Regimes and Events")
         ax.set_xlabel("Date")
         ax.set_ylabel(col)
@@ -192,7 +192,7 @@ def plot_regime_timeline(labels: pd.DataFrame) -> None:
 
     fig, ax = plt.subplots(figsize=(13, 3.5))
     ax.step(labels.index, labels["label"].astype(int), where="post")
-    add_event_spans(ax)
+    add_event_spans(ax, annotate=False)
     ax.set_title("Market Regime Timeline")
     ax.set_xlabel("Date")
     ax.set_ylabel("Regime")
@@ -223,9 +223,9 @@ def plot_split_class_distribution(labels: pd.DataFrame) -> None:
 
     split_labels = []
     for d in labels.index:
-        if d.year <= 2022:
+        if d.year <= 2021:
             split_labels.append("Train")
-        elif d.year == 2023:
+        elif 2022 <= d.year <= 2023:
             split_labels.append("Validation")
         else:
             split_labels.append("Test")
@@ -301,23 +301,27 @@ def plot_test_macro_f1_bars(df: pd.DataFrame) -> None:
     # Keep the model order stable and readable.
     models = list(sub["model"].drop_duplicates())
     horizons = sorted(sub["horizon"].unique())
+    
+    # Use color palette for horizons
+    colors = plt.cm.viridis(np.linspace(0, 1, len(horizons)))
     width = 0.8 / max(len(horizons), 1)
     x = np.arange(len(models))
 
-    fig, ax = plt.subplots(figsize=(13, 6))
-    for i, h in enumerate(horizons):
+    fig, ax = plt.subplots(figsize=(12, 6))
+    for i, (h, color) in enumerate(zip(horizons, colors)):
         vals = []
         for m in models:
             row = sub[(sub["model"] == m) & (sub["horizon"] == h)]
             vals.append(row["macro_f1"].iloc[0] if not row.empty else np.nan)
-        ax.bar(x + (i - (len(horizons) - 1) / 2) * width, vals, width, label=f"t+{h}")
+        ax.bar(x + (i - (len(horizons) - 1) / 2) * width, vals, width, label=f"t+{h}", color=color)
 
     ax.set_xticks(x)
-    ax.set_xticklabels(models, rotation=30, ha="right")
+    # Don't rotate labels - use color coding instead
+    ax.set_xticklabels([m[:20] for m in models], fontsize=9)
     ax.set_title("Test Macro F1 by Model and Horizon")
     ax.set_xlabel("Model")
     ax.set_ylabel("Macro F1")
-    ax.legend()
+    ax.legend(title="Horizon")
     ax.grid(True, axis="y", alpha=0.3)
     savefig("09_test_macro_f1_bar_comparison.png")
 
@@ -355,7 +359,7 @@ def plot_gcn_vs_flattened_gain(df: pd.DataFrame) -> None:
 
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.bar(gain_df["horizon"].astype(str), gain_df["gain"])
-    ax.set_title("GCN Macro-F1 Gain over Fair Flattened No-Graph Baseline")
+    ax.set_title("GCN Macro-F1 Gain over Flattened Graph Tabular Baseline")
     ax.set_xlabel("Prediction Horizon")
     ax.set_ylabel("Macro F1 Gain")
     ax.grid(True, axis="y", alpha=0.3)
@@ -382,23 +386,96 @@ def plot_per_class_f1_test(df: pd.DataFrame) -> None:
         if cur.empty:
             continue
 
-        models = cur["model"].tolist()
+        models = [m[:20] for m in cur["model"].tolist()]  # Truncate for readability
         x = np.arange(len(models))
         width = 0.25
+        
+        # Use distinct colors for classes
+        colors_classes = ["#2ecc71", "#f39c12", "#e74c3c"]  # Green, Orange, Red
 
-        fig, ax = plt.subplots(figsize=(12, 5))
-        ax.bar(x - width, cur["f1_calm"].values, width, label="Calm")
-        ax.bar(x, cur["f1_normal"].values, width, label="Normal")
-        ax.bar(x + width, cur["f1_turbulent"].values, width, label="Turbulent")
+        fig, ax = plt.subplots(figsize=(11, 5))
+        ax.bar(x - width, cur["f1_calm"].values, width, label="Calm", color=colors_classes[0])
+        ax.bar(x, cur["f1_normal"].values, width, label="Normal", color=colors_classes[1])
+        ax.bar(x + width, cur["f1_turbulent"].values, width, label="Turbulent", color=colors_classes[2])
 
         ax.set_xticks(x)
-        ax.set_xticklabels(models, rotation=30, ha="right")
+        ax.set_xticklabels(models, fontsize=8)
         ax.set_title(f"Test Per-Class F1 by Model (t+{h})")
         ax.set_xlabel("Model")
         ax.set_ylabel("F1")
         ax.legend()
         ax.grid(True, axis="y", alpha=0.3)
         savefig(f"11_per_class_f1_test_h{h}.png")
+
+
+def plot_model_comparison_lines_test(df: pd.DataFrame) -> None:
+    """Line graphs showing each model's macro F1 across horizons (test split)."""
+    sub = df[df["split"].str.lower() == "test"].copy()
+    if sub.empty:
+        return
+
+    fig, ax = plt.subplots(figsize=(11, 6))
+    
+    # Group by model and plot one line per model
+    for model in sorted(sub["model"].unique()):
+        model_data = sub[sub["model"] == model].sort_values("horizon")
+        if len(model_data) > 0:
+            ax.plot(model_data["horizon"], model_data["macro_f1"], 
+                   marker="o", label=model[:25], linewidth=2)
+    
+    ax.set_xlabel("Prediction Horizon (days)")
+    ax.set_ylabel("Macro F1")
+    ax.set_title("Test Macro F1: Model Comparison Across Horizons")
+    ax.set_xticks(sorted(sub["horizon"].unique()))
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc="best", fontsize=8, framealpha=0.9)
+    savefig("12_model_comparison_lines_test.png")
+
+
+def plot_accuracy_comparison_lines(df: pd.DataFrame) -> None:
+    """Line graphs showing accuracy across horizons for test split."""
+    sub = df[df["split"].str.lower() == "test"].copy()
+    if sub.empty or "accuracy" not in sub.columns:
+        return
+
+    fig, ax = plt.subplots(figsize=(11, 6))
+    
+    for model in sorted(sub["model"].unique()):
+        model_data = sub[sub["model"] == model].sort_values("horizon")
+        if len(model_data) > 0:
+            ax.plot(model_data["horizon"], model_data["accuracy"], 
+                   marker="s", label=model[:25], linewidth=2)
+    
+    ax.set_xlabel("Prediction Horizon (days)")
+    ax.set_ylabel("Accuracy")
+    ax.set_title("Test Accuracy: Model Comparison Across Horizons")
+    ax.set_xticks(sorted(sub["horizon"].unique()))
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc="best", fontsize=8, framealpha=0.9)
+    savefig("13_accuracy_comparison_lines_test.png")
+
+
+def plot_weighted_f1_comparison_lines(df: pd.DataFrame) -> None:
+    """Line graphs showing weighted F1 across horizons for test split."""
+    sub = df[df["split"].str.lower() == "test"].copy()
+    if sub.empty or "weighted_f1" not in sub.columns:
+        return
+
+    fig, ax = plt.subplots(figsize=(11, 6))
+    
+    for model in sorted(sub["model"].unique()):
+        model_data = sub[sub["model"] == model].sort_values("horizon")
+        if len(model_data) > 0:
+            ax.plot(model_data["horizon"], model_data["weighted_f1"], 
+                   marker="^", label=model[:25], linewidth=2)
+    
+    ax.set_xlabel("Prediction Horizon (days)")
+    ax.set_ylabel("Weighted F1")
+    ax.set_title("Test Weighted F1: Model Comparison Across Horizons")
+    ax.set_xticks(sorted(sub["horizon"].unique()))
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc="best", fontsize=8, framealpha=0.9)
+    savefig("14_weighted_f1_comparison_lines_test.png")
 
 
 # ============================================================
@@ -412,7 +489,7 @@ def main() -> None:
     plot_market_cumulative_return(labels)
     plot_market_features(labels)
     plot_regime_timeline(labels)
-    plot_class_distribution(labels)
+    # plot_class_distribution(labels)  # Image 6 not required
     plot_split_class_distribution(labels)
 
     print("Creating model comparison plots...")
@@ -421,8 +498,11 @@ def main() -> None:
         plot_macro_f1_by_horizon(results, "val")
         plot_macro_f1_by_horizon(results, "test")
         plot_test_macro_f1_bars(results)
-        plot_gcn_vs_flattened_gain(results)
-        plot_per_class_f1_test(results)
+        # plot_gcn_vs_flattened_gain(results)  # Image 10 not required
+        # plot_per_class_f1_test(results)  # Image 11 not required
+        plot_model_comparison_lines_test(results)
+        plot_accuracy_comparison_lines(results)
+        plot_weighted_f1_comparison_lines(results)
 
     print(f"\nDone. All plots saved to: {OUT_DIR.resolve()}")
 

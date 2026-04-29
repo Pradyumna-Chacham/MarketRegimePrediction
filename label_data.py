@@ -46,7 +46,7 @@ df = df.dropna().copy()
 # ----------------------------
 # Split train only for normalization
 # ----------------------------
-train_df = df.loc["2017":"2022"].copy()
+train_df = df.loc["2017":"2021"].copy()
 
 # z-score using TRAIN ONLY
 for col in ["market_volatility", "avg_correlation", "cross_sectional_dispersion"]:
@@ -65,23 +65,27 @@ df["regime_score"] = (
 
 # ----------------------------
 # Thresholds from TRAIN ONLY
+# More realistic:
+# Calm = bottom 25%
+# Normal = middle 60%
+# Turbulent = top 15%
 # ----------------------------
-train_score = df.loc["2017":"2022", "regime_score"]
+train_score = df.loc["2017":"2021", "regime_score"]
 
-p33 = train_score.quantile(0.33)
-p66 = train_score.quantile(0.66)
+p25 = train_score.quantile(0.25)
+p80 = train_score.quantile(0.80)
 
 print("Train-only regime score thresholds:")
-print("33%:", p33)
-print("66%:", p66)
+print("25%:", p25)
+print("80%:", p80)
 
 # ----------------------------
 # Assign labels
 # ----------------------------
 def assign_label(score):
-    if score < p33:
+    if score < p25:
         return 0   # calm
-    elif score <= p66:
+    elif score <= p80:
         return 1   # normal
     else:
         return 2   # turbulent
@@ -89,18 +93,44 @@ def assign_label(score):
 df["label"] = df["regime_score"].apply(assign_label)
 
 # ----------------------------
+# Remove very short turbulent spikes
+# ----------------------------
+min_turbulent_len = 5
+
+labels = df["label"].to_numpy().copy()
+
+i = 0
+while i < len(labels):
+    if labels[i] == 2:
+        j = i
+        while j < len(labels) and labels[j] == 2:
+            j += 1
+
+        if (j - i) < min_turbulent_len:
+            labels[i:j] = 1  # convert short turbulence to normal
+
+        i = j
+    else:
+        i += 1
+
+df["label"] = labels
+
+# ----------------------------
 # Save
 # ----------------------------
 df.to_csv("labeled_data/labeled_data.csv")
 
+# ----------------------------
+# Print stats
+# ----------------------------
 print("\nClass counts overall:")
 print(df["label"].value_counts().sort_index())
 
 print("\nTrain distribution:")
-print(df.loc["2017":"2022", "label"].value_counts().sort_index())
+print(df.loc["2017":"2021", "label"].value_counts().sort_index())
 
 print("\nVal distribution:")
-print(df.loc["2023", "label"].value_counts().sort_index())
+print(df.loc["2022":"2023", "label"].value_counts().sort_index())
 
 print("\nTest distribution:")
 print(df.loc["2024":"2026", "label"].value_counts().sort_index())

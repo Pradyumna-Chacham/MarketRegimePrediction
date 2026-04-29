@@ -116,8 +116,8 @@ def main() -> None:
     print(f"Running classical baselines for horizon={horizon}")
     features = load_features(horizon)
 
-    train_df = features.loc["2017":"2022"].copy()
-    val_df = features.loc["2023"].copy()
+    train_df = features.loc["2017":"2021"].copy()
+    val_df = features.loc["2022":"2023"].copy()
     test_df = features.loc["2024":"2026"].copy()
 
     X_train = train_df[FEATURE_COLS].values

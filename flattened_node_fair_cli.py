@@ -64,7 +64,16 @@ class CFG:
 
 cfg = CFG()
 
-MARKET_COLS = ["market_return", "market_volatility", "avg_correlation", "cross_sectional_dispersion"]
+MARKET_COLS = [
+    "market_return",
+    "market_volatility",
+    "avg_correlation",
+    "cross_sectional_dispersion",
+    "market_volatility_z",
+    "avg_correlation_z",
+    "cross_sectional_dispersion_z",
+    "regime_score",
+]
 CACHE_DIR = Path(ARGS.cache_dir)
 CACHE_DIR.mkdir(exist_ok=True)
 CACHE_TAG = f"h{cfg.horizon}_w{cfg.window}_nd{cfg.node_dim}_flatfair"
@@ -107,8 +116,10 @@ def valid_dates(labels: pd.DataFrame) -> List[pd.Timestamp]:
 
 
 def split_dates(dates: List[pd.Timestamp]):
-    return [d for d in dates if d.year <= 2022], [d for d in dates if d.year == 2023], [d for d in dates if d.year >= 2024]
-
+    train_dates = [d for d in dates if d.year <= 2021]
+    val_dates = [d for d in dates if 2022 <= d.year <= 2023]
+    test_dates = [d for d in dates if d.year >= 2024]
+    return train_dates, val_dates, test_dates
 
 def node_features_for_day(values: np.ndarray, pos: int) -> np.ndarray:
     r1 = values[pos]
