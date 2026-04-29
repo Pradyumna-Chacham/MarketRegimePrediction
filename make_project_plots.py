@@ -310,6 +310,8 @@ def plot_macro_f1_by_horizon(df: pd.DataFrame, split: str) -> None:
     for i, model in enumerate(pivot.columns):
         offset = (i - len(pivot.columns) / 2) * width + width / 2
         ax.bar(x + offset, pivot[model].values, width, label=model[:20])
+        for j, val in enumerate(pivot[model].values):
+            ax.text(x[j] + offset, val, f'{val:.2f}', ha='center', va='bottom', fontsize=8)
 
     ax.set_title(f"Macro F1 by Horizon ({split.title()})")
     ax.set_xlabel("Prediction Horizon")
