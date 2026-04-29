@@ -1,4 +1,4 @@
-#BASELINES T+5
+#BASELINES T+3
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,7 @@ from sklearn.neighbors import NearestCentroid
 from hmmlearn.hmm import GaussianHMM
 
 
-HORIZON = 5  # predict regime at t+5
+HORIZON = 3  # predict regime at t+3
 
 
 # --------------------------------------------------
@@ -63,15 +63,15 @@ features = pd.DataFrame({
 features = features.dropna().copy()
 
 # --------------------------------------------------
-# Target at t+5
+# Target at t+3
 # --------------------------------------------------
 features["future_label"] = features["label"].shift(-HORIZON)
 
-# drop rows near the end that do not have a t+5 target
+# drop rows near the end that do not have a t+3 target
 features = features.dropna(subset=["future_label"]).copy()
 features["future_label"] = features["future_label"].astype(int)
 
-print("\nAfter applying t+5 target:")
+print("\nAfter applying t+3 target:")
 print("Feature dataframe shape:", features.shape)
 print("Feature columns:", list(features.columns))
 print("Target horizon:", HORIZON)
@@ -160,8 +160,8 @@ log_reg.fit(X_train_scaled, y_train)
 val_pred_lr = log_reg.predict(X_val_scaled)
 test_pred_lr = log_reg.predict(X_test_scaled)
 
-evaluate_model("Logistic Regression (t+5) - Validation", y_val, val_pred_lr)
-evaluate_model("Logistic Regression (t+5) - Test", y_test, test_pred_lr)
+evaluate_model("Logistic Regression (t+3) - Validation", y_val, val_pred_lr)
+evaluate_model("Logistic Regression (t+3) - Test", y_test, test_pred_lr)
 
 
 # --------------------------------------------------
@@ -182,8 +182,8 @@ test_clusters = kmeans.predict(X_test_scaled)
 val_pred_km = apply_cluster_label_map(val_clusters, cluster_map)
 test_pred_km = apply_cluster_label_map(test_clusters, cluster_map)
 
-evaluate_model("K-Means (t+5) - Validation", y_val, val_pred_km)
-evaluate_model("K-Means (t+5) - Test", y_test, test_pred_km)
+evaluate_model("K-Means (t+3) - Validation", y_val, val_pred_km)
+evaluate_model("K-Means (t+3) - Test", y_test, test_pred_km)
 
 
 # --------------------------------------------------
@@ -206,8 +206,8 @@ test_clusters_hc = centroid_model.predict(X_test_scaled)
 val_pred_hc = apply_cluster_label_map(val_clusters_hc, cluster_map_hc)
 test_pred_hc = apply_cluster_label_map(test_clusters_hc, cluster_map_hc)
 
-evaluate_model("Hierarchical Clustering (t+5) - Validation", y_val, val_pred_hc)
-evaluate_model("Hierarchical Clustering (t+5) - Test", y_test, test_pred_hc)
+evaluate_model("Hierarchical Clustering (t+3) - Validation", y_val, val_pred_hc)
+evaluate_model("Hierarchical Clustering (t+3) - Test", y_test, test_pred_hc)
 
 
 # --------------------------------------------------
@@ -225,12 +225,12 @@ svm.fit(X_train_scaled, y_train)
 val_pred_svm = svm.predict(X_val_scaled)
 test_pred_svm = svm.predict(X_test_scaled)
 
-evaluate_model("SVM (RBF, t+5) - Validation", y_val, val_pred_svm)
-evaluate_model("SVM (RBF, t+5) - Test", y_test, test_pred_svm)
+evaluate_model("SVM (RBF, t+3) - Validation", y_val, val_pred_svm)
+evaluate_model("SVM (RBF, t+3) - Test", y_test, test_pred_svm)
 
 
 # --------------------------------------------------
-# 5. Hidden Markov Model
+# 3. Hidden Markov Model
 # --------------------------------------------------
 hmm = GaussianHMM(
     n_components=3,
@@ -264,5 +264,5 @@ test_states = hmm.predict(X_test_scaled)
 val_pred_hmm = apply_state_map(val_states, state_map)
 test_pred_hmm = apply_state_map(test_states, state_map)
 
-evaluate_model("HMM (t+5) - Validation", y_val, val_pred_hmm)
-evaluate_model("HMM (t+5) - Test", y_test, test_pred_hmm)
+evaluate_model("HMM (t+3) - Validation", y_val, val_pred_hmm)
+evaluate_model("HMM (t+3) - Test", y_test, test_pred_hmm)
