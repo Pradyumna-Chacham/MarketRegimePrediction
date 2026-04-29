@@ -1,1 +1,79 @@
-venv/*
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+venv/
+.env/
+.env.*
+
+# =========================
+# Jupyter / Notebooks
+# =========================
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# =========================
+# OS / System files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Logs
+# =========================
+*.log
+results_horizon_runs/logs/
+
+# =========================
+# Model checkpoints (large)
+# =========================
+checkpoints/
+*.pt
+*.pth
+
+# =========================
+# Cached tensors / preprocessing
+# =========================
+cache_gcn/
+cache_flat_fair/
+*.npy
+*.npz
+*.pt
+
+# =========================
+# Generated results
+# =========================
+results_horizon_runs/*.csv
+results_horizon_runs/*.png
+
+# =========================
+# Plots / figures
+# =========================
+plots_market_regime/
+
+# =========================
+# Temporary / debug
+# =========================
+*.tmp
+*.bak
+
+# =========================
+# Data (OPTIONAL — decide!)
+# =========================
+# If data is large → ignore
+# If required → keep
+
+# data/
+# labeled_data/
+
+# =========================
+# VS Code / IDE
+# =========================
+.vscode/
+.idea/
