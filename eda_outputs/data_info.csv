@@ -1,0 +1,5 @@
+metric,value
+prices_shape,"(2322, 100)"
+returns_shape,"(2321, 100)"
+start_date,2017-01-04 00:00:00
+end_date,2026-03-30 00:00:00
