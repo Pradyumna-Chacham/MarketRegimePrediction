@@ -1,8 +1,5 @@
-Here’s a **cleaned, submission-ready README** based on your file (I fixed clarity, consistency, and added a strong results narrative + removed redundancy):
 
----
-
-# Market Regime Prediction with Graph Neural Networks
+# Learning Market Regimes from Time-Evolving Asset Graphs
 
 ## Project Title
 
@@ -76,8 +73,8 @@ Raw Prices → Returns → Rolling Features → Regime Score → Labels
 
 | Split      | Period    |
 | ---------- | --------- |
-| Train      | 2017–2022 |
-| Validation | 2023      |
+| Train      | 2017–2021 |
+| Validation | 2022-2023 |
 | Test       | 2024–2026 |
 
 ---
