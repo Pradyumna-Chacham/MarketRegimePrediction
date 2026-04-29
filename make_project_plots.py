@@ -278,18 +278,47 @@ def plot_macro_f1_by_horizon(df: pd.DataFrame, split: str) -> None:
     if sub.empty:
         return
 
-    pivot = sub.pivot_table(index="horizon", columns="model", values="macro_f1", aggfunc="mean").sort_index()
+    pivot = sub.pivot_table(
+        index="horizon",
+        columns="model",
+        values="macro_f1",
+        aggfunc="mean"
+    ).sort_index()
 
-    fig, ax = plt.subplots(figsize=(11, 6))
-    for model in pivot.columns:
-        ax.plot(pivot.index, pivot[model], marker="o", label=model)
+    # ----------------------------
+    # Enforce model ordering
+    # ----------------------------
+    mean_f1 = pivot.mean().sort_values(ascending=False)
+
+    # Ensure GCN Attention is first
+    ordered_models = ["GCN Attention"]
+    ordered_models += [m for m in mean_f1.index if m != "GCN Attention"]
+
+    # Filter in case model names differ slightly
+    ordered_models = [m for m in ordered_models if m in pivot.columns]
+
+    pivot = pivot[ordered_models]
+
+    # ----------------------------
+    # Plot
+    # ----------------------------
+    fig, ax = plt.subplots(figsize=(12, 6))
+    horizons = pivot.index.tolist()
+    x = np.arange(len(horizons))
+    width = 0.8 / len(pivot.columns)
+
+    for i, model in enumerate(pivot.columns):
+        offset = (i - len(pivot.columns) / 2) * width + width / 2
+        ax.bar(x + offset, pivot[model].values, width, label=model[:20])
 
     ax.set_title(f"Macro F1 by Horizon ({split.title()})")
     ax.set_xlabel("Prediction Horizon")
     ax.set_ylabel("Macro F1")
-    ax.set_xticks(sorted(sub["horizon"].unique()))
-    ax.grid(True, alpha=0.3)
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"t+{h}" for h in horizons])
+    ax.grid(True, alpha=0.3, axis="y")
     ax.legend(loc="best", fontsize=8)
+
     savefig(f"08_macro_f1_by_horizon_{split.lower()}.png")
 
 
